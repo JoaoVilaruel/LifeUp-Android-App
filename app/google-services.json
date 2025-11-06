@@ -1,0 +1,38 @@
+{
+  "project_info": {
+    "project_number": "166815027847",
+    "project_id": "listagamificada-the-project",
+    "storage_bucket": "listagamificada-the-project.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:166815027847:android:0eedbe6870dc62b8271e22",
+        "android_client_info": {
+          "package_name": "com.example.listagamificada"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "166815027847-oht9bijl1s58vr2jgfptoge6rl5th7eo.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.listagamificada",
+            "certificate_hash": "b25b6779c31a3d97fce81f776067a5ac004bb84c"
+          }
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAYM9bJdvNfga7qDKEErnxAKIHg5pPoL0w"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
