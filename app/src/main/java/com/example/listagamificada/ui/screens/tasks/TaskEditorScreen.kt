@@ -1,5 +1,7 @@
+// Define o pacote para as telas de tarefas.
 package com.example.listagamificada.ui.screens.tasks
 
+// Importações de bibliotecas do Jetpack Compose e outras dependências.
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -19,30 +21,37 @@ import com.example.listagamificada.data.local.entity.TaskEntity
 import com.example.listagamificada.viewmodel.TaskViewModel
 import java.util.*
 
+// Opt-in para usar APIs experimentais do Material 3.
 @OptIn(ExperimentalMaterial3Api::class)
+// Composable para a tela de edição/criação de tarefas.
 @Composable
 fun TaskEditorScreen(factory: ViewModelProvider.Factory, taskId: String? = null, onSaved: () -> Unit) {
+    // Obtém a instância do TaskViewModel.
     val taskViewModel: TaskViewModel = viewModel(factory = factory)
+    // Estados para armazenar os dados da tarefa.
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var difficulty by remember { mutableStateOf("Fácil") }
 
+    // Obtém o ID do usuário logado.
     val uid = taskViewModel.getUserId() ?: ""
 
-    // Custom Colors
+    // Cores personalizadas do tema.
     val darkCharcoal = Color(0xFF1A1A2E)
     val neonPink = Color(0xFFE94560)
     val cyberPurple = Color(0xFF9f5fde)
     val offWhite = Color(0xFFF0F0F0)
 
-    // TODO: load existing task if taskId provided
+    // TODO: Carregar a tarefa existente se um taskId for fornecido.
 
+    // Layout principal da tela.
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(darkCharcoal)
             .padding(16.dp)
     ) {
+        // Título da tela (Nova Missão ou Editar Missão).
         Text(
             text = if (taskId == null) "Nova Missão" else "Editar Missão",
             style = MaterialTheme.typography.headlineMedium,
@@ -50,6 +59,7 @@ fun TaskEditorScreen(factory: ViewModelProvider.Factory, taskId: String? = null,
             modifier = Modifier.padding(bottom = 24.dp)
         )
 
+        // Cores personalizadas para os campos de texto.
         val textFieldColors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = neonPink,
             unfocusedBorderColor = offWhite.copy(alpha = 0.5f),
@@ -60,6 +70,7 @@ fun TaskEditorScreen(factory: ViewModelProvider.Factory, taskId: String? = null,
             unfocusedTextColor = offWhite
         )
 
+        // Campo de texto para o título da missão.
         OutlinedTextField(
             value = title,
             onValueChange = { title = it },
@@ -68,6 +79,7 @@ fun TaskEditorScreen(factory: ViewModelProvider.Factory, taskId: String? = null,
             colors = textFieldColors
         )
         Spacer(modifier = Modifier.height(16.dp))
+        // Campo de texto para a descrição da missão.
         OutlinedTextField(
             value = description,
             onValueChange = { description = it },
@@ -77,6 +89,7 @@ fun TaskEditorScreen(factory: ViewModelProvider.Factory, taskId: String? = null,
         )
         Spacer(modifier = Modifier.height(24.dp))
 
+        // Seletor de dificuldade.
         Text("Dificuldade", style = MaterialTheme.typography.titleMedium, color = offWhite)
         Spacer(modifier = Modifier.height(8.dp))
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -96,19 +109,24 @@ fun TaskEditorScreen(factory: ViewModelProvider.Factory, taskId: String? = null,
             }
         }
 
+        // Espaçador para empurrar o botão para o final da tela.
         Spacer(modifier = Modifier.weight(1f))
 
+        // Botão para salvar a missão.
         Button(
             onClick = {
                 if (title.isNotBlank() && uid.isNotEmpty()) {
+                    // Cria uma nova entidade de tarefa.
                     val task = TaskEntity(
-                        id = taskId ?: UUID.randomUUID().toString(),
+                        id = taskId ?: UUID.randomUUID().toString(), // Usa o ID existente ou cria um novo.
                         title = title,
                         description = description,
                         ownerId = uid,
                         difficulty = difficulty
                     )
+                    // Adiciona a tarefa através do ViewModel.
                     taskViewModel.addTask(task)
+                    // Chama o callback de sucesso.
                     onSaved()
                 }
             },
@@ -116,6 +134,7 @@ fun TaskEditorScreen(factory: ViewModelProvider.Factory, taskId: String? = null,
             contentPadding = PaddingValues(),
             colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent)
         ) {
+            // Estilo do botão com gradiente.
             Box(
                 modifier = Modifier
                     .fillMaxSize()

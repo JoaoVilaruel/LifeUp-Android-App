@@ -1,5 +1,7 @@
+// Define o pacote para a tela de perfil.
 package com.example.listagamificada.ui.screens.profile
 
+// Importações de bibliotecas do Jetpack Compose e outras dependências.
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -11,6 +13,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -20,35 +23,37 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.listagamificada.util.UiState
 import com.example.listagamificada.viewmodel.AuthViewModel
-import com.example.listagamificada.viewmodel.ProfileViewModel
+import com.example.listagamificada.viewmodel.MainViewModel
 import kotlinx.coroutines.flow.collectLatest
 
+// Composable para a tela de perfil do usuário.
 @Composable
-fun ProfileScreen(factory: ViewModelProvider.Factory, onLogout: () -> Unit) {
-    val profileViewModel: ProfileViewModel = viewModel(factory = factory)
-    val authViewModel: AuthViewModel = viewModel(factory = factory)
-    val statsState = profileViewModel.statsState.collectAsState()
+fun ProfileScreen(mainViewModel: MainViewModel, authViewModel: AuthViewModel, onLogout: () -> Unit) {
+    // Coleta o estado das estatísticas do usuário.
+    val statsState by mainViewModel.stats.collectAsState()
+    // Estado para o Snackbar.
     val snackbarHostState = remember { SnackbarHostState() }
+    // Obtém o ID do usuário logado.
+    val uid = authViewModel.getUserId()
 
-    val user = authViewModel.currentUser()
-    val uid = profileViewModel.getUserId() ?: ""
+    // Efeito para carregar os dados do perfil e verificar a recompensa diária.
+    LaunchedEffect(uid) {
+        if (!uid.isNullOrEmpty()) {
+            mainViewModel.loadStatsForUser(uid)
+            mainViewModel.checkForDailyReward(uid)
+        }
+    }
 
+    // Efeito para exibir mensagens da UI no Snackbar.
     LaunchedEffect(Unit) {
-        profileViewModel.rewardMessage.collectLatest { message ->
+        mainViewModel.uiEvent.collectLatest { message ->
             snackbarHostState.showSnackbar(message, duration = SnackbarDuration.Short)
         }
     }
 
-    LaunchedEffect(uid) {
-        if (uid.isNotEmpty()) {
-            profileViewModel.loadStats(uid)
-        }
-    }
-    
+    // Cores do tema.
     val navyBlue = Color(0xFF16213E)
     val neonPink = Color(0xFFE94560)
     val cyberPurple = Color(0xFF9f5fde)
@@ -59,84 +64,64 @@ fun ProfileScreen(factory: ViewModelProvider.Factory, onLogout: () -> Unit) {
         containerColor = Color.Transparent
     ) { padding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp),
+            modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            when (val s = statsState.value) {
-                is UiState.Loading -> CircularProgressIndicator(color = neonPink)
+            // Gerencia a exibição da UI com base no estado do carregamento dos dados.
+            when (val s = statsState) {
+                is UiState.Loading, is UiState.Idle -> CircularProgressIndicator(color = neonPink)
                 is UiState.Error -> Text("Erro: ${s.message}", color = neonPink)
                 is UiState.Success -> {
                     val stats = s.data
-                    val points = stats?.points ?: 0
-                    val level = (points / 100) + 1
-                    val xpForNextLevel = 100
-                    val currentXp = points % xpForNextLevel
-                    val progress = currentXp.toFloat() / xpForNextLevel
+                    if (stats != null) {
+                        val xpForNextLevel = 100 // Exemplo: 100 XP por nível.
+                        val progress = stats.xp.toFloat() / xpForNextLevel
 
-                    // --- Player Info Card ---
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(24.dp))
-                            .background(
-                                brush = Brush.verticalGradient(
-                                    colors = listOf(cyberPurple.copy(alpha = 0.3f), navyBlue)
+                        // Card com as informações do perfil.
+                        Box(
+                            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp))
+                                .background(brush = Brush.verticalGradient(colors = listOf(cyberPurple.copy(alpha = 0.3f), navyBlue)))
+                                .padding(24.dp)
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                                Icon(imageVector = Icons.Default.Person, contentDescription = "Avatar", modifier = Modifier.size(90.dp), tint = offWhite)
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(stats.userName, fontSize = 22.sp, fontWeight = FontWeight.Bold, color = offWhite)
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                // Nível e barra de progresso de XP.
+                                Text("Nível ${stats.level}", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = neonPink)
+                                Spacer(modifier = Modifier.height(8.dp))
+                                LinearProgressIndicator(
+                                    progress = progress,
+                                    modifier = Modifier.height(10.dp).fillMaxWidth().clip(CircleShape),
+                                    color = neonPink,
+                                    trackColor = navyBlue.copy(alpha = 0.5f)
                                 )
-                            )
-                            .padding(24.dp)
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(
-                                imageVector = Icons.Default.Person, 
-                                contentDescription = "Avatar", 
-                                modifier = Modifier.size(90.dp),
-                                tint = offWhite
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                user?.email ?: "Jogador", 
-                                fontSize = 22.sp, 
-                                fontWeight = FontWeight.Bold, 
-                                color = offWhite
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-
-                            Text("Nível $level", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = neonPink)
-                            Spacer(modifier = Modifier.height(8.dp))
-                            LinearProgressIndicator(
-                                progress = progress,
-                                modifier = Modifier.height(10.dp).fillMaxWidth().clip(CircleShape),
-                                color = neonPink,
-                                trackColor = navyBlue.copy(alpha = 0.5f)
-                            )
-                            Text("$currentXp / $xpForNextLevel XP", fontSize = 12.sp, color = offWhite.copy(alpha = 0.8f))
+                                Text("${stats.xp} / $xpForNextLevel XP", fontSize = 12.sp, color = offWhite.copy(alpha = 0.8f))
+                            }
                         }
-                    }
 
-                    Spacer(modifier = Modifier.height(32.dp))
+                        Spacer(modifier = Modifier.height(32.dp))
 
-                    // --- Badges/Achievements Section ---
-                    Text(
-                        "Conquistas",
-                        style = MaterialTheme.typography.titleLarge,
-                        modifier = Modifier.align(Alignment.Start),
-                        color = offWhite
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                        Icon(Icons.Default.Star, "Conquista 1", modifier = Modifier.size(40.dp), tint = Color.Gray)
-                        Icon(Icons.Default.Star, "Conquista 2", modifier = Modifier.size(40.dp), tint = Color.Gray)
-                        Icon(Icons.Default.Star, "Conquista 3", modifier = Modifier.size(40.dp), tint = Color.Gray)
+                        // Seção de conquistas.
+                        Text("Conquistas", style = MaterialTheme.typography.titleLarge, modifier = Modifier.align(Alignment.Start), color = offWhite)
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                            Icon(Icons.Default.Star, "Conquista 1", modifier = Modifier.size(40.dp), tint = Color.Gray)
+                            Icon(Icons.Default.Star, "Conquista 2", modifier = Modifier.size(40.dp), tint = Color.Gray)
+                            Icon(Icons.Default.Star, "Conquista 3", modifier = Modifier.size(40.dp), tint = Color.Gray)
+                        }
+                    } else {
+                        // Mensagem para o caso de não haver estatísticas.
+                        Text("Ainda não há estatísticas para exibir.", color = offWhite)
                     }
                 }
-                is UiState.Idle -> {}
             }
 
-            Spacer(modifier = Modifier.weight(1f)) // Pushes logout button to the bottom
+            Spacer(modifier = Modifier.weight(1f))
 
+            // Botão de logout.
             Button(
                 onClick = onLogout,
                 colors = ButtonDefaults.buttonColors(containerColor = neonPink.copy(alpha = 0.6f)),
