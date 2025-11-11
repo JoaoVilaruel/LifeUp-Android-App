@@ -2,6 +2,8 @@ package com.example.listagamificada.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.listagamificada.data.local.entity.StatsEntity
+import com.example.listagamificada.data.repository.AppRepository
 import com.example.listagamificada.util.UiState
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
@@ -11,6 +13,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
 class AuthViewModel(
+    private val repository: AppRepository,
     private val auth: FirebaseAuth = FirebaseAuth.getInstance()
 ) : ViewModel() {
 
@@ -29,12 +32,23 @@ class AuthViewModel(
         }
     }
 
-    fun register(email: String, password: String) {
+    fun register(email: String, password: String, name: String) { // Add name parameter
         viewModelScope.launch {
             _loginState.value = UiState.Loading
             try {
                 val result = auth.createUserWithEmailAndPassword(email, password).await()
-                _loginState.value = UiState.Success(result.user)
+                val user = result.user
+                if (user != null) {
+                    val newStats = StatsEntity(
+                        userId = user.uid,
+                        userName = name, // Use the provided name
+                        level = 1,
+                        xp = 0,
+                        points = 0
+                    )
+                    repository.upsertStats(newStats)
+                }
+                _loginState.value = UiState.Success(user)
             } catch (e: Exception) {
                 _loginState.value = UiState.Error(e.message ?: "Falha ao registrar", e)
             }

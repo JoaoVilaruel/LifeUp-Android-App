@@ -1,5 +1,7 @@
+// Define o pacote para as telas de citação.
 package com.example.listagamificada.ui.screens.quotes
 
+// Importações de bibliotecas do Jetpack Compose e outras dependências.
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -24,39 +26,46 @@ import com.example.listagamificada.data.remote.retrofit.QuoteResponse
 import com.example.listagamificada.util.UiState
 import com.example.listagamificada.viewmodel.QuoteViewModel
 
+// Composable para a tela que exibe uma citação aleatória.
 @Composable
 fun QuoteScreen(factory: ViewModelProvider.Factory) {
+    // Obtém a instância do QuoteViewModel.
     val viewModel: QuoteViewModel = viewModel(factory = factory)
+    // Coleta o estado da citação do ViewModel.
     val quoteState by viewModel.quoteState.collectAsState()
 
-    val navyBlue = Color(0xFF16213E)
+    // Cores do tema.
     val neonPink = Color(0xFFE94560)
-    val cyberPurple = Color(0xFF9f5fde)
-    val offWhite = Color(0xFFF0F0F0)
 
+    // Efeito para buscar uma citação aleatória quando a tela é iniciada.
     LaunchedEffect(Unit) {
         viewModel.fetchRandomQuote()
     }
 
+    // Layout principal da tela.
     Box(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp),
         contentAlignment = Alignment.Center
     ) {
+        // Gerencia a exibição da UI com base no estado do carregamento dos dados.
         when (val state = quoteState) {
             is UiState.Loading -> CircularProgressIndicator(color = neonPink)
             is UiState.Error -> Text("Falha ao buscar frase: ${state.message}", color = neonPink)
             is UiState.Success -> {
+                // Exibe o conteúdo da citação se o carregamento for bem-sucedido.
                 QuoteContent(quote = state.data, onRefresh = { viewModel.fetchRandomQuote() })
             }
-            is UiState.Idle -> {}
+            is UiState.Idle -> {} // Estado inicial ou ocioso.
         }
     }
 }
 
+// Composable privado para exibir o conteúdo da citação.
 @Composable
 private fun QuoteContent(quote: QuoteResponse, onRefresh: () -> Unit) {
+    // Cores do tema.
     val navyBlue = Color(0xFF16213E)
     val neonPink = Color(0xFFE94560)
     val cyberPurple = Color(0xFF9f5fde)
@@ -67,6 +76,7 @@ private fun QuoteContent(quote: QuoteResponse, onRefresh: () -> Unit) {
         verticalArrangement = Arrangement.Center,
         modifier = Modifier.fillMaxSize()
     ) {
+        // Box com fundo em gradiente para destacar a citação.
         Box(
             modifier = Modifier
                 .clip(RoundedCornerShape(24.dp))
@@ -78,6 +88,7 @@ private fun QuoteContent(quote: QuoteResponse, onRefresh: () -> Unit) {
                 .padding(32.dp)
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                // Texto da citação.
                 Text(
                     text = "\"${quote.q}\"",
                     fontSize = 28.sp,
@@ -87,6 +98,7 @@ private fun QuoteContent(quote: QuoteResponse, onRefresh: () -> Unit) {
                     lineHeight = 36.sp
                 )
                 Spacer(modifier = Modifier.height(24.dp))
+                // Autor da citação.
                 Text(
                     text = "- ${quote.a}",
                     fontSize = 18.sp,
@@ -98,12 +110,14 @@ private fun QuoteContent(quote: QuoteResponse, onRefresh: () -> Unit) {
             }
         }
         Spacer(modifier = Modifier.height(32.dp))
+        // Botão para buscar uma nova citação.
         Button(
             onClick = onRefresh,
             modifier = Modifier.fillMaxWidth(0.8f).height(52.dp),
             contentPadding = PaddingValues(),
             colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent)
         ) {
+            // Estilo do botão com gradiente.
             Box(
                 modifier = Modifier
                     .fillMaxSize()

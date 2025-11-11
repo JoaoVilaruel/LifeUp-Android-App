@@ -3,36 +3,34 @@ package com.example.listagamificada
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.room.Room
-import com.example.listagamificada.data.local.db.AppDatabase
-import com.example.listagamificada.data.repository.ProfileRepository
-import com.example.listagamificada.data.repository.TaskRepository
-import com.example.listagamificada.ui.navigation.navGraph
-import com.example.listagamificada.viewmodel.AppViewModelFactory
+import androidx.activity.viewModels
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import com.example.listagamificada.ui.navigation.NavGraph
+import com.example.listagamificada.ui.theme.ListaGamificadaTheme
+import com.example.listagamificada.util.UiState
+import com.example.listagamificada.viewmodel.MainViewModel
 
 class MainActivity : ComponentActivity() {
-
-    private lateinit var db: AppDatabase
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Initialize Room DB
-        db = Room.databaseBuilder(
-            applicationContext,
-            AppDatabase::class.java,
-            "todogamified-db"
-        ).fallbackToDestructiveMigration().build()
+        // Get the unified factory from the Application class
+        val factory = (application as ToDoGamifiedApp).viewModelFactory
 
-        // Repositories
-        val taskRepo = TaskRepository(db.taskDao())
-        val profileRepo = ProfileRepository(db.statsDao())
-
-        // ViewModel factory
-        val factory = AppViewModelFactory(taskRepo, profileRepo, applicationContext)
+        // Get the MainViewModel instance using the unified factory
+        val mainViewModel: MainViewModel by viewModels { factory }
 
         setContent {
-            navGraph(factory = factory)
+            // Observe the stats state to get the current theme
+            val statsState by mainViewModel.stats.collectAsState()
+            val equippedTheme = (statsState as? UiState.Success)?.data?.equippedTheme ?: "default"
+
+            ListaGamificadaTheme(themeId = equippedTheme) {
+                // Pass the unified factory to the NavGraph
+                NavGraph(factory = factory)
+            }
         }
     }
 }
