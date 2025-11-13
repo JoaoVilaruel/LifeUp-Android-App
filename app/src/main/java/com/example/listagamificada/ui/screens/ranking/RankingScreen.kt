@@ -1,19 +1,25 @@
-// Define o pacote para as telas de ranking.
 package com.example.listagamificada.ui.screens.ranking
 
-// Importações de bibliotecas do Jetpack Compose e outras dependências.
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -28,57 +34,84 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
+import androidx.navigation.NavDestination.Companion.hierarchy
+import androidx.navigation.compose.currentBackStackEntryAsState
 import com.example.listagamificada.data.local.entity.StatsEntity
+import com.example.listagamificada.ui.navigation.Screen
+import com.example.listagamificada.ui.screens.tasks.bottomNavItems
 import com.example.listagamificada.util.UiState
 import com.example.listagamificada.viewmodel.AuthViewModel
 import com.example.listagamificada.viewmodel.MainViewModel
 import com.example.listagamificada.viewmodel.ViewModelFactory
 
-// Composable para a tela de ranking.
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RankingScreen(factory: ViewModelFactory) {
-    // Obtém instâncias dos ViewModels.
+fun RankingScreen(factory: ViewModelFactory, navController: NavController) {
     val mainViewModel: MainViewModel = viewModel(factory = factory)
     val authViewModel: AuthViewModel = viewModel(factory = factory)
-    // Coleta o estado do ranking.
     val rankingState by mainViewModel.ranking.collectAsState()
-    // Obtém o ID do usuário atual.
     val currentUserId = authViewModel.getUserId()
 
-    // Efeito para carregar o ranking quando a tela é iniciada.
-    LaunchedEffect(Unit) {
+    LaunchedEffect(currentUserId) {
         mainViewModel.loadRanking()
     }
 
-    // Gerencia a exibição da UI com base no estado do carregamento dos dados.
-    when (val state = rankingState) {
-        is UiState.Loading, is UiState.Idle -> {
-            // Exibe um indicador de progresso durante o carregamento.
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = Color(0xFFE94560))
-            }
-        }
-        is UiState.Error -> {
-            // Exibe uma mensagem de erro se o carregamento falhar.
-            Box(modifier = Modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.Center) {
-                Text("Erro: ${state.message}", color = Color(0xFFE94560), textAlign = TextAlign.Center)
-            }
-        }
-        is UiState.Success -> {
-            // Exibe a lista de jogadores no ranking.
-            if (state.data.isEmpty()) {
-                // Mensagem para quando o ranking está vazio.
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Nenhum jogador no ranking ainda.", color = Color.White.copy(alpha = 0.8f))
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Ranking") },
+                actions = {
+                    IconButton(onClick = { navController.navigate(Screen.Settings.route) }) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = "Configurações"
+                        )
+                    }
                 }
-            } else {
-                // Lista rolável com os itens do ranking.
-                LazyColumn(
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    itemsIndexed(state.data) { index, playerStats ->
-                        RankingItem(rank = index + 1, stats = playerStats, isCurrentUser = playerStats.userId == currentUserId)
+            )
+        },
+        bottomBar = {
+            NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp)) {
+                val navBackStackEntry by navController.currentBackStackEntryAsState()
+                val currentDestination = navBackStackEntry?.destination
+                bottomNavItems.forEach { screen ->
+                    NavigationBarItem(
+                        icon = { Icon(screen.icon!!, contentDescription = screen.label) },
+                        label = { Text(screen.label) },
+                        selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
+                        onClick = { navController.navigate(screen.route) }
+                    )
+                }
+            }
+        }
+    ) { paddingValues ->
+        Box(modifier = Modifier.padding(paddingValues).fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+            when (val state = rankingState) {
+                is UiState.Loading, is UiState.Idle -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = Color(0xFFE94560))
+                    }
+                }
+                is UiState.Error -> {
+                    Box(modifier = Modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.Center) {
+                        Text("Erro ao carregar o ranking. Verifique se o índice composto (level, coins) foi criado no Firestore.", color = Color(0xFFE94560), textAlign = TextAlign.Center)
+                    }
+                }
+                is UiState.Success -> {
+                    if (state.data.isEmpty()) {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Text("Nenhum jogador no ranking ainda.", color = Color.White.copy(alpha = 0.8f))
+                        }
+                    } else {
+                        LazyColumn(
+                            contentPadding = PaddingValues(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            itemsIndexed(state.data) { index, playerStats ->
+                                RankingItem(rank = index + 1, stats = playerStats, isCurrentUser = playerStats.userId == currentUserId)
+                            }
+                        }
                     }
                 }
             }
@@ -86,16 +119,13 @@ fun RankingScreen(factory: ViewModelFactory) {
     }
 }
 
-// Composable para cada item da lista de ranking.
 @Composable
 fun RankingItem(rank: Int, stats: StatsEntity, isCurrentUser: Boolean) {
-    // Cores do tema.
     val navyBlue = Color(0xFF16213E)
     val neonPink = Color(0xFFE94560)
     val cyberPurple = Color(0xFF9f5fde)
     val offWhite = Color(0xFFF0F0F0)
 
-    // Cor da medalha de acordo com a posição no ranking.
     val medalColor = when (rank) {
         1 -> Color(0xFFFFD700) // Ouro
         2 -> Color(0xFFC0C0C0) // Prata
@@ -103,12 +133,10 @@ fun RankingItem(rank: Int, stats: StatsEntity, isCurrentUser: Boolean) {
         else -> null
     }
 
-    // Gradiente de fundo para o item.
     val backgroundBrush = Brush.horizontalGradient(
         colors = listOf(navyBlue, cyberPurple.copy(alpha = 0.4f))
     )
 
-    // Borda destacada para o usuário atual.
     val borderBrush = if (isCurrentUser) Brush.horizontalGradient(listOf(neonPink, cyberPurple)) else null
 
     Box(
@@ -122,7 +150,6 @@ fun RankingItem(rank: Int, stats: StatsEntity, isCurrentUser: Boolean) {
             .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            // Posição no ranking.
             Text(
                 text = "#$rank",
                 fontSize = 20.sp,
@@ -130,7 +157,6 @@ fun RankingItem(rank: Int, stats: StatsEntity, isCurrentUser: Boolean) {
                 color = medalColor ?: offWhite
             )
             Spacer(modifier = Modifier.width(16.dp))
-            // Ícone do jogador.
             Icon(
                 imageVector = Icons.Filled.Person,
                 contentDescription = "Avatar",
@@ -142,22 +168,20 @@ fun RankingItem(rank: Int, stats: StatsEntity, isCurrentUser: Boolean) {
                     .padding(4.dp)
             )
             Spacer(modifier = Modifier.width(12.dp))
-            // Nome do jogador.
             Text(
-                text = if(isCurrentUser) "Você" else stats.userName,
+                text = if (isCurrentUser) "Você" else stats.userName.ifBlank { "Jogador Anônimo" },
                 fontWeight = FontWeight.SemiBold,
                 color = offWhite,
                 modifier = Modifier.weight(1f)
             )
             Spacer(modifier = Modifier.width(12.dp))
-            // Ícone da medalha (se houver).
             medalColor?.let {
-                Icon(Icons.Default.Person, contentDescription = "Medal", tint = it)
+                // CORREÇÃO VISUAL FINAL:
+                Icon(Icons.Filled.Person, contentDescription = "Medalha", tint = it)
                 Spacer(modifier = Modifier.width(8.dp))
             }
-            // Nível e XP do jogador.
             Text(
-                text = "Nível ${stats.level} (${stats.xp} XP)",
+                text = "Nível ${stats.level} (${stats.coins} Pontos)",
                 fontWeight = FontWeight.Bold,
                 color = neonPink
             )

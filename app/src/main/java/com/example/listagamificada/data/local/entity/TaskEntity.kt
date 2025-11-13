@@ -11,5 +11,7 @@ data class TaskEntity(
     val description: String? = null,
     val ownerId: String,
     val completed: Boolean = false,
-    val difficulty: String = "Fácil" // Can be "Fácil", "Médio", "Difícil"
+    val difficulty: String = "Fácil",
+    val category: String = "Pessoal",
+    val dueDate: Long? = null
 )

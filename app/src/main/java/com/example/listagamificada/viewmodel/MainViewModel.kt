@@ -29,6 +29,18 @@ class MainViewModel(private val repository: AppRepository) : ViewModel() {
     private val _uiEvent = MutableSharedFlow<String>()
     val uiEvent = _uiEvent.asSharedFlow()
 
+    fun clearData() {
+        _tasks.value = UiState.Idle
+        _stats.value = UiState.Idle
+        _ranking.value = UiState.Idle
+    }
+
+    fun deleteTask(task: TaskEntity) {
+        viewModelScope.launch {
+            repository.deleteTask(task)
+        }
+    }
+
     fun toggleTaskCompletion(task: TaskEntity, userId: String) {
         viewModelScope.launch {
             val toggledTask = task.copy(completed = !task.completed)
@@ -58,7 +70,7 @@ class MainViewModel(private val repository: AppRepository) : ViewModel() {
                             points = currentStats.points + xpGained // Also add to total points
                         )
                         repository.upsertStats(updatedStats)
-                        _uiEvent.emit("🎉 +$xpGained XP!")
+                        _uiEvent.emit("🎉 +${'$'}xpGained XP!")
                     }
                 }
             }
@@ -89,7 +101,7 @@ class MainViewModel(private val repository: AppRepository) : ViewModel() {
                     lastClaimedDaily = currentTime
                 ) ?: StatsEntity(userId = userId, points = dailyReward, lastClaimedDaily = currentTime)
                 repository.upsertStats(newStats)
-                _uiEvent.emit("🎉 Recompensa Diária +$dailyReward Pontos!")
+                _uiEvent.emit("🎉 Recompensa Diária +${'$'}dailyReward Pontos!")
             }
         }
     }

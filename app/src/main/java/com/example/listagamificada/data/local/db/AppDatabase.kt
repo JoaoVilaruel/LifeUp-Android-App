@@ -1,9 +1,11 @@
-// Define o pacote para a configuração do banco de dados local.
 package com.example.listagamificada.data.local.db
 
-// Importa as classes necessárias do Room e as entidades e DAOs da aplicação.
+import android.content.Context
 import androidx.room.Database
+import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.listagamificada.data.local.dao.RankingDao
 import com.example.listagamificada.data.local.dao.StatsDao
 import com.example.listagamificada.data.local.dao.TaskDao
@@ -11,18 +13,37 @@ import com.example.listagamificada.data.local.entity.StatsEntity
 import com.example.listagamificada.data.local.entity.TaskEntity
 import com.example.listagamificada.model.entity.RankingEntity
 
-/**
- * O banco de dados principal da aplicação.
- * Inclui tabelas para tarefas, estatísticas do usuário e o ranking.
- */
-// Anotação que define as entidades do banco de dados, a versão e desativa a exportação do schema.
-@Database(entities = [TaskEntity::class, StatsEntity::class, RankingEntity::class], version = 9, exportSchema = false)
-// Classe abstrata que representa o banco de dados da aplicação.
+@Database(entities = [TaskEntity::class, StatsEntity::class, RankingEntity::class], version = 10, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
-    // Função abstrata que retorna o DAO para operações com tarefas.
     abstract fun taskDao(): TaskDao
-    // Função abstrata que retorna o DAO para operações com estatísticas.
     abstract fun statsDao(): StatsDao
-    // Função abstrata que retorna o DAO para operações com o ranking.
     abstract fun rankingDao(): RankingDao
+
+    // CORREÇÃO: Adicionando o companion object para criar a instância do DB
+    companion object {
+        @Volatile
+        private var INSTANCE: AppDatabase? = null
+
+        fun getDatabase(context: Context): AppDatabase {
+            return INSTANCE ?: synchronized(this) {
+                val instance = Room.databaseBuilder(
+                    context.applicationContext,
+                    AppDatabase::class.java,
+                    "gamified_list_database"
+                )
+                .addMigrations(MIGRATION_9_10) // Adicionando a migração que já existe no arquivo
+                .fallbackToDestructiveMigration() // Segurança para evitar crashes por migração
+                .build()
+                INSTANCE = instance
+                instance
+            }
+        }
+    }
+}
+
+val MIGRATION_9_10 = object : Migration(9, 10) {
+    override fun migrate(database: SupportSQLiteDatabase) {
+        database.execSQL("ALTER TABLE tasks ADD COLUMN category TEXT NOT NULL DEFAULT 'Pessoal'")
+        database.execSQL("ALTER TABLE tasks ADD COLUMN dueDate INTEGER")
+    }
 }

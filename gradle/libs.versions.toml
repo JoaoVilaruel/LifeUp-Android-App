@@ -17,6 +17,7 @@ ksp = "2.0.21-1.0.27"
 accompanist = "0.32.0"
 uiTextGoogleFonts = "1.9.4"
 mlKitTranslation = "17.0.2"
+foundationLayout = "1.9.4"
 
 [libraries]
 # AndroidX
@@ -62,6 +63,7 @@ retrofit-converter-gson = { group = "com.squareup.retrofit2", name = "converter-
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
+androidx-compose-foundation-layout = { group = "androidx.compose.foundation", name = "foundation-layout", version.ref = "foundationLayout" }
 
 
 [plugins]
