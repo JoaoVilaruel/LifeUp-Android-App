@@ -5,7 +5,6 @@ import androidx.lifecycle.viewModelScope
 import com.example.listagamificada.data.local.entity.TaskEntity
 import com.example.listagamificada.data.repository.ProfileRepository
 import com.example.listagamificada.data.repository.TaskRepository
-import com.example.listagamificada.data.repository.UiResult
 import com.example.listagamificada.util.UiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -26,7 +25,7 @@ class TaskViewModel(
     fun loadTasks(uid: String) {
         viewModelScope.launch {
             taskRepo.getTasks(uid).collect { result ->
-                _tasks.value = result.toUiState()
+                _tasks.value = result
             }
         }
     }
@@ -40,22 +39,33 @@ class TaskViewModel(
 
         // --- Reward Logic ---
         if (task.completed) {
-            val points = when (task.difficulty) {
+            val xpGained = when (task.difficulty) {
                 "Fácil" -> 10
                 "Médio" -> 25
                 "Difícil" -> 50
                 else -> 0
             }
-            
+
             val uid = getUserId()
-            if (uid != null && points > 0) {
-                val result = profileRepo.getStats(uid).first() // Get current stats
-                if (result is UiResult.Success) {
-                    val currentStats = result.data
-                    if (currentStats != null) {
-                        val updatedStats = currentStats.copy(points = currentStats.points + points)
-                        profileRepo.upsertStats(updatedStats)
+            if (uid != null && xpGained > 0) {
+                val currentStats = profileRepo.getStats(uid).first()
+                if (currentStats != null) {
+                    var newXp = currentStats.xp + xpGained
+                    var newLevel = currentStats.level
+                    var xpForNextLevel = newLevel * 100
+
+                    while (newXp >= xpForNextLevel) {
+                        newXp -= xpForNextLevel
+                        newLevel++
+                        xpForNextLevel = newLevel * 100
                     }
+
+                    val updatedStats = currentStats.copy(
+                        points = currentStats.points + xpGained, // Also update points
+                        xp = newXp,
+                        level = newLevel
+                    )
+                    profileRepo.upsertStats(updatedStats)
                 }
             }
         }
@@ -65,16 +75,10 @@ class TaskViewModel(
         taskRepo.deleteTask(task)
     }
 
-    suspend fun getTask(id: String): UiResult<TaskEntity?> {
-        return taskRepo.getTaskById(id)
-    }
-}
-
-// Helper to convert UiResult to UiState
-fun <T> UiResult<T>.toUiState(): UiState<T> {
-    return when (this) {
-        is UiResult.Success -> UiState.Success(this.data)
-        is UiResult.Error -> UiState.Error(this.exception?.message ?: "Erro desconhecido")
-        is UiResult.Loading -> UiState.Loading
+    suspend fun getTask(id: String): TaskEntity? {
+        return when (val result = taskRepo.getTaskById(id)) {
+            is UiState.Success -> result.data
+            else -> null
+        }
     }
 }
